@@ -1,0 +1,28 @@
+Update code ZMT
+Created Wednesday 23 March 2022
+
+SSH vào máy chủ ldap chạy screen và từ máy chủ ldap ssh tới lần luợt 2 máy chủ ZMT để update code module ZMT 
+
+B1: SSH vào máy chủ zmt01
+B2: Backup thư mục usr/share/nginx/html/zmt-qn/sites/all/modules/zmt
+cp -R /usr/share/nginx/html/zmt-qn/sites/all/modules/zmt  /usr/share/nginx/html/zmt-qn/sites/all/modules/zmt-bak099822
+B3: cd /usr/share/nginx/html/zmt-qn/sites/all/modules/zmt
+B4: git pull origin quangnam
+(đã đổi url của origin từ ssh về https)
+B5: Kiểm tra đảm bảo code mới nhất
+B6: Chạy lệnh: drush updatedb
+B7: tắt chế độ maintain
+B9: Truy cập mailadmin và kiểm tra 
+
+
+Note: 
+B6: Truy cập HAProxy (lb01) - loadbalance
+B7: Sửa file cấu hình /etc/haproxy/haproxy.cfg
+	server  zmt01   10.255.31.75:80        check send-proxy
+ #  server  zmt02   10.255.31.76:80        check send-proxy
+B8: Kiểm tra pcs trên lb01: # pcs status
+B9: Restart dịch vụ HAproxy
+# pcs resource restart HAProxy
+B9: Kiểm tra dịch vụ HAProxy: # pcs status
+Check máy webui trên máy zmt01 (đặt filehost zmt01 trên máy remote desktop QN) và làm tuơng tự với zmt02
+
