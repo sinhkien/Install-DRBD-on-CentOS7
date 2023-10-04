@@ -1,0 +1,79 @@
+====== Install DRBD on Centos 7 ======
+
+* Set hostname trên 2 node
+#hostnamectl set-hostname node1
+#hostnamectl set-hostname node2
+* Sửa file host trên 2 con node
+ #vim /etc/hosts
+192.168.122.135 node1
+192.168.122.136 node2
+* Chuẩn bị ổ đĩa chứa dữ liệu trên 2 node: 
+- Tạo phân vùng lvm mới trên 2 node: 
+#pvcreate /dev/vdb
+#vgcreate vg00 /dev/vdb
+#vgdisplay vg00
+#lvcreate -n vdb1 -L 49G vg00
+* Các bước cài đặt DRBD
+- Thực hiện trên 2 node
+  # rpm -ivh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
+  # rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-elrepo.org
+  # yum -y install drbd90-utils kmod-drbd90
+ - Kích hoạt module DRBD trên cả 2 server
+  #modprobe drbd
+ - Kiểm tra lại xem DRBD đã hoạt động:
+  # lsmod | grep drbd
+* Cấu hình DRBD thực hiện trên 2 node
+# vim /etc/drbd.d/test.res
+resource test {
+protocol C;
+on nextcloud1 {
+device /dev/drbd0;
+disk /dev/vg00/vdb1;
+address 192.168.122.135:7788;
+meta-disk internal;
+}
+on nextcloud2 {
+device /dev/drbd0;
+disk /dev/vg00/vdb1;
+address 192.168.122.136:7788;
+meta-disk internal;
+}
+}
+
+* Trên node1 
+- #drbdadm create-md test
+* Trên node2 
+- #drbdadm create-md test
+
+** Khi thấy kết quả hiển thị như sau báo hiệu đã cấu hình thành công:
+--==  Thank you for participating in the global usage survey  ==--
+initializing activity log
+NOT initializing bitmap
+Writing meta data...
+New drbd meta data block successfully created.
+success
+
+* Bật và kích hoạt DRBD daemon
+Ở trên 2 server, chúng ta bật và cho DRBD khởi động cùng hệ thống
+# systemctl start drbd
+# systemctl enable drbd
+* Kích hoạt trên node chính
+# drbdadm primary testdata1 --force
+* Kiểm tra trạng thái:
+# drbdadm status 
+# drbdadm status test
+* Thiết lập ổ đĩa DRBD node1
+ mkfs.ext4 /dev/drbd0
+mount /dev/drbd0 /opt
+Tạo file test 
+touch /opt/test.txt
+umount /opt
+chủyển chế độ secondary cho node1
+#drbdadm secondary test
+* Trên node2 
+- Kích hoạt chế độ primary 
+# drbdadm primary test
+# mount /dev/sdb1 /opt
+- Vào kiểm tra thư mục /opt đã có file test.txt được tạo ở node1 không.
+* Xuất hiện file test.txt dữ liệu đã được đồng bộ qua node2
+============= Kết quả hoàn thành =================
